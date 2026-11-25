@@ -47,10 +47,11 @@ export default function ManageQuizzes() {
   }
 
   const togglePublish = (quiz) => {
-    updateQuiz(quiz.id, { published: !quiz.published })
+    const isLive = quiz.published !== false
+    updateQuiz(quiz.id, { published: !isLive })
     showToast(
-      quiz.published ? `"${quiz.title}" set to Draft.` : `"${quiz.title}" published!`,
-      quiz.published ? 'warning' : 'success'
+      isLive ? `"${quiz.title}" set to Draft.` : `"${quiz.title}" published!`,
+      isLive ? 'warning' : 'success'
     )
   }
 

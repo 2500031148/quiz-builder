@@ -18,7 +18,7 @@ export default function ConfirmModal({ isOpen, title, message, confirmLabel = 'D
     >
       <div
         style={{
-          background: 'white', borderRadius: 'var(--radius)',
+          background: 'var(--bg-card)', color: 'var(--text)', borderRadius: 'var(--radius)',
           boxShadow: 'var(--shadow-lg)',
           padding: '2rem', maxWidth: 420, width: '100%',
           animation: 'scaleInModal 0.2s ease',

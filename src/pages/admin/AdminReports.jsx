@@ -54,7 +54,7 @@ export default function AdminReports() {
           onClick={() => setOpenEndedModal(null)}
         >
           <div
-            style={{ background: 'white', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-lg)', padding: '2rem', maxWidth: 560, width: '100%', maxHeight: '80vh', overflowY: 'auto' }}
+            style={{ background: 'var(--bg-card)', color: 'var(--text)', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-lg)', padding: '2rem', maxWidth: 560, width: '100%', maxHeight: '80vh', overflowY: 'auto' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>

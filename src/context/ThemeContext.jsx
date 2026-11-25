@@ -9,7 +9,7 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
-    localStorage.setItem('quizbuilder_theme', dark ? 'dark' : 'light')
+    try { localStorage.setItem('quizbuilder_theme', dark ? 'dark' : 'light') } catch {}
   }, [dark])
 
   return (

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react'
+import { createContext, useContext, useState, useMemo } from 'react'
 
 const QuizContext = createContext(null)
 
@@ -61,13 +61,11 @@ function seedQuizzes() {
 }
 
 export function QuizProvider({ children }) {
-  const [quizzes, setQuizzes] = useState([])
-  const [attempts, setAttempts] = useState([])
-
-  useEffect(() => {
+  const [quizzes, setQuizzes] = useState(() => {
     seedQuizzes()
-    loadData()
-  }, [])
+    return safeParseJSON(QUIZZES_KEY)
+  })
+  const [attempts, setAttempts] = useState(() => safeParseJSON(ATTEMPTS_KEY))
 
   const loadData = () => {
     setQuizzes(safeParseJSON(QUIZZES_KEY))

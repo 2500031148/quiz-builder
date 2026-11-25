@@ -57,10 +57,12 @@ export default function Navbar() {
 
         <div className="navbar-user">
           <button
+            type="button"
             className="btn btn-sm"
             onClick={toggleTheme}
+            aria-label={dark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             title={dark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            style={{ fontSize: '1.1rem', padding: '0.3rem 0.6rem', marginRight: '0.5rem' }}
+            style={{ fontSize: '1.1rem', padding: '0.35rem 0.65rem', marginRight: '0.5rem', background: 'var(--bg)', border: '1px solid var(--border)' }}
           >
             {dark ? '☀️' : '🌙'}
           </button>
