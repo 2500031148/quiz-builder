@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { showToast } from '../../components/Toast'
 import './Auth.css'
 
 export default function Login() {
@@ -22,6 +23,7 @@ export default function Login() {
     }
     // Get role from storage to redirect
     const user = JSON.parse(localStorage.getItem('quizbuilder_user') || '{}')
+    showToast(`Welcome back, ${user.name || 'there'}! 👋`, 'success')
     navigate(user.role === 'admin' ? '/admin' : '/user')
   }
 

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { QuizProvider } from './context/QuizContext'
+import { ThemeProvider } from './context/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
 
 // Auth pages
@@ -20,62 +21,67 @@ import TakeQuiz from './pages/user/TakeQuiz'
 import QuizResult from './pages/user/QuizResult'
 import UserHistory from './pages/user/UserHistory'
 import Leaderboard from './pages/user/Leaderboard'
+import UserProfile from './pages/user/UserProfile'
 
 // Shared
 import Navbar from './components/Navbar'
 import Home from './pages/Home'
+import NotFound from './pages/NotFound'
 import { ToastContainer } from './components/Toast'
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <QuizProvider>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+    <ThemeProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <QuizProvider>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
 
-            {/* Admin Routes */}
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute role="admin">
-                  <Navbar />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<AdminDashboard />} />
-              <Route path="create-quiz" element={<CreateQuiz />} />
-              <Route path="manage-quizzes" element={<ManageQuizzes />} />
-              <Route path="edit-quiz/:id" element={<EditQuiz />} />
-              <Route path="reports" element={<AdminReports />} />
-            </Route>
+              {/* Admin Routes */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute role="admin">
+                    <Navbar />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<AdminDashboard />} />
+                <Route path="create-quiz" element={<CreateQuiz />} />
+                <Route path="manage-quizzes" element={<ManageQuizzes />} />
+                <Route path="edit-quiz/:id" element={<EditQuiz />} />
+                <Route path="reports" element={<AdminReports />} />
+              </Route>
 
-            {/* User Routes */}
-            <Route
-              path="/user"
-              element={
-                <ProtectedRoute role="user">
-                  <Navbar />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<UserDashboard />} />
-              <Route path="take-quiz/:id" element={<TakeQuiz />} />
-              <Route path="result/:id" element={<QuizResult />} />
-              <Route path="history" element={<UserHistory />} />
-              <Route path="leaderboard" element={<Leaderboard />} />
-            </Route>
+              {/* User Routes */}
+              <Route
+                path="/user"
+                element={
+                  <ProtectedRoute role="user">
+                    <Navbar />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<UserDashboard />} />
+                <Route path="take-quiz/:id" element={<TakeQuiz />} />
+                <Route path="result/:id" element={<QuizResult />} />
+                <Route path="history" element={<UserHistory />} />
+                <Route path="leaderboard" element={<Leaderboard />} />
+                <Route path="profile" element={<UserProfile />} />
+              </Route>
 
-            {/* Catch all */}
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        </QuizProvider>
-      </AuthProvider>
-      <ToastContainer />
-    </BrowserRouter>
+              {/* Catch all */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </QuizProvider>
+        </AuthProvider>
+        <ToastContainer />
+      </BrowserRouter>
+    </ThemeProvider>
   )
 }
 

@@ -114,6 +114,17 @@ export default function EditQuiz() {
                 🔀 Randomize question order
               </label>
             </div>
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={quiz.published !== false}
+                  onChange={e => updateMeta('published', e.target.checked)}
+                  style={{ width: 'auto' }}
+                />
+                📢 Publish (visible to users)
+              </label>
+            </div>
           </div>
         </div>
 

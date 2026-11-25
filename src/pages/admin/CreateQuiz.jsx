@@ -24,6 +24,7 @@ export default function CreateQuiz() {
     category: 'General',
     timeLimit: 10,
     randomize: false,
+    published: true,
     questions: [defaultQuestion()],
   })
 
@@ -119,6 +120,17 @@ export default function CreateQuiz() {
                   style={{ width: 'auto' }}
                 />
                 🔀 Randomize question order
+              </label>
+            </div>
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={quiz.published ?? true}
+                  onChange={e => updateMeta('published', e.target.checked)}
+                  style={{ width: 'auto' }}
+                />
+                📢 Publish immediately (visible to users)
               </label>
             </div>
           </div>

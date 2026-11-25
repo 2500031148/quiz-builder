@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { showToast } from '../../components/Toast'
 import './Auth.css'
 
 export default function Signup() {
@@ -28,6 +29,7 @@ export default function Signup() {
       setError(result.error)
       return
     }
+    showToast('Account created successfully! 🎉', 'success')
     navigate(form.role === 'admin' ? '/admin' : '/user')
   }
 

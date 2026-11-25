@@ -1,13 +1,17 @@
 import { Link, useNavigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
+import { showToast } from './Toast'
 import './Navbar.css'
 
 export default function Navbar() {
   const { currentUser, logout } = useAuth()
+  const { dark, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
 
   const handleLogout = () => {
+    showToast('Logged out successfully!', 'info')
     logout()
     navigate('/login')
   }
@@ -26,6 +30,7 @@ export default function Navbar() {
         { to: '/user', label: '🏠 Dashboard' },
         { to: '/user/leaderboard', label: '🏆 Leaderboard' },
         { to: '/user/history', label: '📜 My History' },
+        { to: '/user/profile', label: '👤 Profile' },
       ]
 
   return (
@@ -51,6 +56,14 @@ export default function Navbar() {
         </nav>
 
         <div className="navbar-user">
+          <button
+            className="btn btn-sm"
+            onClick={toggleTheme}
+            title={dark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            style={{ fontSize: '1.1rem', padding: '0.3rem 0.6rem', marginRight: '0.5rem' }}
+          >
+            {dark ? '☀️' : '🌙'}
+          </button>
           <div className="user-info">
             <div className="user-avatar">{currentUser?.name?.[0]?.toUpperCase()}</div>
             <div className="user-details">
