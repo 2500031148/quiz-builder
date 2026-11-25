@@ -1,28 +1,35 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuiz } from '../../context/QuizContext'
+import { showToast } from '../../components/Toast'
+import ConfirmModal from '../../components/ConfirmModal'
 
 const CATEGORIES = ['All', 'General', 'Science', 'Math', 'History', 'Technology', 'Language', 'Sports', 'Entertainment']
 
 function getDifficulty(quiz) {
   const q = quiz.questions?.length || 0
   const t = quiz.timeLimit || 10
-  const ratio = q / t  // questions per minute
+  const ratio = q / t
   if (ratio >= 1.5 || q >= 15) return { label: 'Hard', color: '#dc2626', bg: '#fee2e2' }
   if (ratio >= 0.7 || q >= 7) return { label: 'Medium', color: '#d97706', bg: '#fef3c7' }
   return { label: 'Easy', color: '#16a34a', bg: '#dcfce7' }
 }
 
 export default function ManageQuizzes() {
-  const { quizzes, deleteQuiz, addQuiz, getQuizAttempts } = useQuiz()
+  const { quizzes, deleteQuiz, addQuiz, updateQuiz, getQuizAttempts } = useQuiz()
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('All')
   const [duplicating, setDuplicating] = useState(null)
+  const [confirmModal, setConfirmModal] = useState(null) // { id, title }
 
   const handleDelete = (id, title) => {
-    if (window.confirm(`Delete quiz "${title}"? This cannot be undone.`)) {
-      deleteQuiz(id)
-    }
+    setConfirmModal({ id, title })
+  }
+
+  const confirmDelete = () => {
+    deleteQuiz(confirmModal.id)
+    showToast(`"${confirmModal.title}" deleted.`, 'error')
+    setConfirmModal(null)
   }
 
   const handleDuplicate = (quiz) => {
@@ -35,7 +42,16 @@ export default function ManageQuizzes() {
     delete copy.id
     delete copy.createdAt
     addQuiz(copy)
+    showToast(`"${quiz.title}" duplicated!`, 'success')
     setTimeout(() => setDuplicating(null), 800)
+  }
+
+  const togglePublish = (quiz) => {
+    updateQuiz(quiz.id, { published: !quiz.published })
+    showToast(
+      quiz.published ? `"${quiz.title}" set to Draft.` : `"${quiz.title}" published!`,
+      quiz.published ? 'warning' : 'success'
+    )
   }
 
   const filtered = quizzes.filter(q => {
@@ -47,10 +63,19 @@ export default function ManageQuizzes() {
 
   return (
     <div className="page">
+      <ConfirmModal
+        isOpen={!!confirmModal}
+        title="Delete Quiz?"
+        message={`"${confirmModal?.title}" will be permanently deleted. This cannot be undone.`}
+        confirmLabel="Delete Quiz"
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmModal(null)}
+      />
+
       <div className="page-header">
         <div>
           <h1>Manage Quizzes 📋</h1>
-          <p>View, edit, duplicate, or delete your quizzes.</p>
+          <p>View, edit, publish, duplicate, or delete your quizzes.</p>
         </div>
         <Link to="/admin/create-quiz" className="btn btn-primary">➕ Create New Quiz</Link>
       </div>
@@ -89,9 +114,7 @@ export default function ManageQuizzes() {
           <div className="empty-icon">📋</div>
           <h3>No quizzes yet</h3>
           <p>Create your first quiz to get started.</p>
-          <Link to="/admin/create-quiz" className="btn btn-primary" style={{ marginTop: '1rem' }}>
-            Create Quiz
-          </Link>
+          <Link to="/admin/create-quiz" className="btn btn-primary" style={{ marginTop: '1rem' }}>Create Quiz</Link>
         </div>
       ) : filtered.length === 0 ? (
         <div className="empty-state card">
@@ -108,10 +131,11 @@ export default function ManageQuizzes() {
             <thead>
               <tr>
                 <th>Quiz Title</th>
+                <th>Status</th>
                 <th>Category</th>
                 <th>Difficulty</th>
-                <th>Questions</th>
-                <th>Time Limit</th>
+                <th>Qs</th>
+                <th>Time</th>
                 <th>Attempts</th>
                 <th>Actions</th>
               </tr>
@@ -123,17 +147,26 @@ export default function ManageQuizzes() {
                   ? Math.round(quizAttempts.reduce((s, a) => s + a.percentage, 0) / quizAttempts.length)
                   : null
                 const diff = getDifficulty(quiz)
+                const isPublished = quiz.published !== false
                 return (
                   <tr key={quiz.id}>
                     <td>
                       <div style={{ fontWeight: 700 }}>{quiz.title}</div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                        {quiz.description?.substring(0, 55)}{quiz.description?.length > 55 ? '...' : ''}
+                        {quiz.description?.substring(0, 50)}{quiz.description?.length > 50 ? '...' : ''}
                       </div>
                     </td>
                     <td>
-                      <span className="badge badge-primary">{quiz.category}</span>
+                      <span style={{
+                        fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem',
+                        borderRadius: 999,
+                        background: isPublished ? '#dcfce7' : '#f1f5f9',
+                        color: isPublished ? '#16a34a' : '#64748b',
+                      }}>
+                        {isPublished ? '🟢 Live' : '⚫ Draft'}
+                      </span>
                     </td>
+                    <td><span className="badge badge-primary">{quiz.category}</span></td>
                     <td>
                       <span style={{
                         fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem',
@@ -143,7 +176,7 @@ export default function ManageQuizzes() {
                       </span>
                     </td>
                     <td>{quiz.questions?.length || 0}</td>
-                    <td>{quiz.timeLimit} min</td>
+                    <td>{quiz.timeLimit}m</td>
                     <td>
                       {quizAttempts.length > 0 ? (
                         <span>
@@ -157,24 +190,25 @@ export default function ManageQuizzes() {
                       )}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                        <Link to={`/admin/edit-quiz/${quiz.id}`} className="btn btn-sm btn-outline">
-                          ✏️ Edit
-                        </Link>
+                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                        <Link to={`/admin/edit-quiz/${quiz.id}`} className="btn btn-sm btn-outline" title="Edit">✏️</Link>
+                        <button
+                          className="btn btn-sm"
+                          style={{ background: isPublished ? '#fef3c7' : '#dcfce7', color: isPublished ? '#d97706' : '#16a34a', border: 'none' }}
+                          onClick={() => togglePublish(quiz)}
+                          title={isPublished ? 'Unpublish (set to Draft)' : 'Publish'}
+                        >
+                          {isPublished ? '📤' : '📢'}
+                        </button>
                         <button
                           className="btn btn-sm btn-secondary"
                           onClick={() => handleDuplicate(quiz)}
                           disabled={duplicating === quiz.id}
-                          title="Duplicate this quiz"
+                          title="Duplicate"
                         >
                           {duplicating === quiz.id ? '✅' : '📋'}
                         </button>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={() => handleDelete(quiz.id, quiz.title)}
-                        >
-                          🗑️
-                        </button>
+                        <button className="btn btn-sm btn-danger" onClick={() => handleDelete(quiz.id, quiz.title)} title="Delete">🗑️</button>
                       </div>
                     </td>
                   </tr>
@@ -187,4 +221,3 @@ export default function ManageQuizzes() {
     </div>
   )
 }
-

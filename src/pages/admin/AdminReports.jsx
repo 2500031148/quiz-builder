@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { useQuiz } from '../../context/QuizContext'
+import { showToast } from '../../components/Toast'
 
 export default function AdminReports() {
   const { quizzes, attempts } = useQuiz()
+  const [openEndedModal, setOpenEndedModal] = useState(null) // attempt object
 
   const totalParticipants = new Set(attempts.map(a => a.userId)).size
   const avgScore = attempts.length
@@ -18,20 +21,13 @@ export default function AdminReports() {
   })
 
   const sortedAttempts = [...attempts].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
-
   const formatDate = (d) => new Date(d).toLocaleString()
 
-  // CSV Export
   const exportCSV = () => {
     const headers = ['Participant', 'Email', 'Quiz', 'Score (%)', 'Correct', 'Total', 'Time Taken (s)', 'Status', 'Completed At']
     const rows = sortedAttempts.map(a => [
-      a.userName,
-      a.userEmail,
-      a.quizTitle,
-      a.percentage,
-      a.correct,
-      a.total,
-      a.timeTaken ?? '',
+      a.userName, a.userEmail, a.quizTitle, a.percentage,
+      a.correct, a.total, a.timeTaken ?? '',
       a.percentage >= 60 ? 'Pass' : 'Fail',
       new Date(a.completedAt).toLocaleString(),
     ])
@@ -43,10 +39,44 @@ export default function AdminReports() {
     a.download = `quiz-reports-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
+    showToast('CSV exported successfully!', 'success')
   }
+
+  // Count open-ended questions in an attempt
+  const openEndedCount = (a) => a.questions?.filter(q => q.type === 'open-ended').length || 0
 
   return (
     <div className="page">
+      {/* Open-ended answer review modal */}
+      {openEndedModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          onClick={() => setOpenEndedModal(null)}
+        >
+          <div
+            style={{ background: 'white', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-lg)', padding: '2rem', maxWidth: 560, width: '100%', maxHeight: '80vh', overflowY: 'auto' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 800 }}>📝 Open-Ended Answers</h2>
+              <button onClick={() => setOpenEndedModal(null)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+            </div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              {openEndedModal.userName} · {openEndedModal.quizTitle}
+            </div>
+            {openEndedModal.questions?.filter(q => q.type === 'open-ended').map((q) => (
+              <div key={q.id} style={{ marginBottom: '1.25rem' }}>
+                <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Q: {q.text}</div>
+                <div style={{ background: 'var(--bg)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', fontSize: '0.9rem' }}>
+                  {openEndedModal.answers?.[q.id] || <em style={{ color: 'var(--text-muted)' }}>No answer given</em>}
+                </div>
+              </div>
+            ))}
+            <button className="btn btn-outline" style={{ width: '100%', justifyContent: 'center' }} onClick={() => setOpenEndedModal(null)}>Close</button>
+          </div>
+        </div>
+      )}
+
       <div className="page-header">
         <div>
           <h1>Reports & Analytics 📊</h1>
@@ -163,6 +193,7 @@ export default function AdminReports() {
                 <th>Time Taken</th>
                 <th>Status</th>
                 <th>Completed At</th>
+                <th>Open-Ended</th>
               </tr>
             </thead>
             <tbody>
@@ -186,6 +217,19 @@ export default function AdminReports() {
                     </span>
                   </td>
                   <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{formatDate(a.completedAt)}</td>
+                  <td>
+                    {openEndedCount(a) > 0 ? (
+                      <button
+                        className="btn btn-sm btn-outline"
+                        onClick={() => setOpenEndedModal(a)}
+                        style={{ fontSize: '0.78rem' }}
+                      >
+                        📝 View ({openEndedCount(a)})
+                      </button>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

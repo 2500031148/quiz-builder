@@ -3,8 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useQuiz } from '../../context/QuizContext'
 
+// Bug #5 Fix: Fisher-Yates shuffle (uniform distribution)
 function shuffle(arr) {
-  return [...arr].sort(() => Math.random() - 0.5)
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
 }
 
 export default function TakeQuiz() {
@@ -22,15 +28,20 @@ export default function TakeQuiz() {
   const [submitted, setSubmitted] = useState(false)
   const startTimeRef = useRef(null)
   const timerRef = useRef(null)
+  // Bug #1 Fix: ref to guard against stale closure double-submit
+  const submittedRef = useRef(false)
 
   useEffect(() => {
     if (!quiz) navigate('/user')
     else {
-      const qs = quiz.randomize ? shuffle(quiz.questions) : quiz.questions
+      const qs = quiz.randomize ? shuffle(quiz.questions) : [...quiz.questions]
       setQuestions(qs)
       setTimeLeft(quiz.timeLimit * 60)
     }
-  }, [quiz])
+  }, [id])  // depend on id, not quiz object (prevents double-shuffle in StrictMode)
+
+  // Cleanup on unmount
+  useEffect(() => () => clearInterval(timerRef.current), [])
 
   const startQuiz = () => {
     setStarted(true)
@@ -39,7 +50,8 @@ export default function TakeQuiz() {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timerRef.current)
-          handleSubmit()
+          // Bug #1 Fix: use ref, not state, to guard inside interval closure
+          handleSubmitRef.current()
           return 0
         }
         return prev - 1
@@ -47,25 +59,24 @@ export default function TakeQuiz() {
     }, 1000)
   }
 
-  useEffect(() => () => clearInterval(timerRef.current), [])
-
-  const handleAnswer = (questionId, value) => {
-    setAnswers(prev => ({ ...prev, [questionId]: value }))
-  }
-
   const handleSubmit = () => {
-    if (submitted) return
-    clearInterval(timerRef.current)
+    // Bug #1 Fix: guard with ref first, then state
+    if (submittedRef.current) return
+    submittedRef.current = true
     setSubmitted(true)
+    clearInterval(timerRef.current)
 
     const timeTaken = Math.round((Date.now() - startTimeRef.current) / 1000)
     let correct = 0
     let total = 0
 
+    // Use functional form to get latest answers
+    const currentAnswers = answersRef.current
+
     for (const q of questions) {
       if (q.type === 'open-ended') continue
       total++
-      if (answers[q.id] === q.correct) correct++
+      if (currentAnswers[q.id] === q.correct) correct++
     }
 
     const percentage = total > 0 ? Math.round((correct / total) * 100) : 0
@@ -76,7 +87,7 @@ export default function TakeQuiz() {
       userId: currentUser.id,
       userName: currentUser.name,
       userEmail: currentUser.email,
-      answers,
+      answers: currentAnswers,
       questions,
       correct,
       total,
@@ -87,6 +98,18 @@ export default function TakeQuiz() {
     navigate(`/user/result/${attempt.id}`)
   }
 
+  // Keep a ref to answers so timer callback always has latest values
+  const answersRef = useRef(answers)
+  useEffect(() => { answersRef.current = answers }, [answers])
+
+  // Keep ref to handleSubmit so interval can call latest version
+  const handleSubmitRef = useRef(handleSubmit)
+  useEffect(() => { handleSubmitRef.current = handleSubmit }, [questions, answers])
+
+  const handleAnswer = (questionId, value) => {
+    setAnswers(prev => ({ ...prev, [questionId]: value }))
+  }
+
   const formatTime = (secs) => {
     const m = Math.floor(secs / 60).toString().padStart(2, '0')
     const s = (secs % 60).toString().padStart(2, '0')
@@ -95,6 +118,7 @@ export default function TakeQuiz() {
 
   if (!quiz) return <div className="spinner" />
 
+  // ── Pre-quiz screen ──────────────────────────────────────────────
   if (!started) {
     return (
       <div className="page" style={{ maxWidth: 650 }}>
@@ -133,10 +157,13 @@ export default function TakeQuiz() {
     )
   }
 
+  // ── Active quiz screen ───────────────────────────────────────────
   const q = questions[current]
+  const answered = Object.keys(answers).length
   const progress = Math.round(((current + 1) / questions.length) * 100)
   const timerPct = Math.round((timeLeft / (quiz.timeLimit * 60)) * 100)
   const timerColor = timerPct > 50 ? 'var(--success)' : timerPct > 20 ? 'var(--warning)' : 'var(--danger)'
+  const unanswered = questions.filter(q => q.type !== 'open-ended' && answers[q.id] === undefined).length
 
   return (
     <div className="page" style={{ maxWidth: 750 }}>
@@ -147,6 +174,11 @@ export default function TakeQuiz() {
             <h2 style={{ fontWeight: 800 }}>{quiz.title}</h2>
             <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
               Question {current + 1} of {questions.length}
+              {unanswered > 0 && (
+                <span style={{ marginLeft: '0.75rem', color: 'var(--warning)', fontWeight: 600 }}>
+                  · {unanswered} unanswered
+                </span>
+              )}
             </div>
           </div>
           <div style={{
@@ -155,16 +187,19 @@ export default function TakeQuiz() {
             padding: '0.5rem 1rem',
             borderRadius: 'var(--radius-sm)',
             border: `2px solid ${timerColor}`,
+            transition: 'all 0.3s',
           }}>
             <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>TIME LEFT</div>
-            <div style={{ fontSize: '1.6rem', fontWeight: 900, color: timerColor }}>
+            <div style={{ fontSize: '1.6rem', fontWeight: 900, color: timerColor, fontVariantNumeric: 'tabular-nums' }}>
               {formatTime(timeLeft)}
             </div>
           </div>
         </div>
+
+        {/* Progress bar */}
         <div style={{ marginTop: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
-            <span>Progress</span><span>{progress}%</span>
+            <span>Progress</span><span>{answered}/{questions.filter(q => q.type !== 'open-ended').length} answered</span>
           </div>
           <div className="progress-bar-container">
             <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
@@ -172,7 +207,7 @@ export default function TakeQuiz() {
         </div>
       </div>
 
-      {/* Question */}
+      {/* Question Card */}
       <div className="question-card">
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1rem' }}>
           <span className="badge badge-primary">Q{current + 1}</span>
@@ -195,8 +230,10 @@ export default function TakeQuiz() {
                 key={i}
                 className={`option-btn ${answers[q.id] === i ? 'selected' : ''}`}
                 onClick={() => handleAnswer(q.id, i)}
+                aria-label={`Option ${String.fromCharCode(65 + i)}: ${opt}`}
+                aria-pressed={answers[q.id] === i}
               >
-                <span style={{ fontWeight: 700, marginRight: '0.5rem', color: 'var(--text-muted)' }}>
+                <span style={{ fontWeight: 700, marginRight: '0.5rem', color: answers[q.id] === i ? 'inherit' : 'var(--text-muted)' }}>
                   {String.fromCharCode(65 + i)}.
                 </span>
                 {opt}
@@ -218,27 +255,38 @@ export default function TakeQuiz() {
       </div>
 
       {/* Navigation */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', gap: '1rem' }}>
         <button
           className="btn btn-outline"
           onClick={() => setCurrent(c => c - 1)}
           disabled={current === 0}
         >
-          ← Previous
+          ← Prev
         </button>
 
-        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+        {/* Question bubble navigator — scrollable on mobile */}
+        <div style={{
+          display: 'flex', gap: '0.35rem', flexWrap: 'wrap',
+          justifyContent: 'center', flex: 1,
+          maxHeight: 80, overflowY: 'auto',
+        }}>
           {questions.map((_, i) => (
             <button
               key={i}
               onClick={() => setCurrent(i)}
+              aria-label={`Go to question ${i + 1}`}
               style={{
-                width: '32px', height: '32px', borderRadius: '50%',
+                width: '30px', height: '30px', borderRadius: '50%',
                 border: '2px solid',
-                borderColor: i === current ? 'var(--primary)' : answers[questions[i]?.id] !== undefined ? 'var(--success)' : 'var(--border)',
-                background: i === current ? 'var(--primary)' : answers[questions[i]?.id] !== undefined ? 'var(--success)' : 'white',
+                borderColor: i === current ? 'var(--primary)'
+                  : answers[questions[i]?.id] !== undefined ? 'var(--success)'
+                  : 'var(--border)',
+                background: i === current ? 'var(--primary)'
+                  : answers[questions[i]?.id] !== undefined ? 'var(--success)'
+                  : 'white',
                 color: i === current || answers[questions[i]?.id] !== undefined ? 'white' : 'var(--text)',
-                fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
+                fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer',
+                flexShrink: 0,
               }}
             >
               {i + 1}
@@ -247,22 +295,32 @@ export default function TakeQuiz() {
         </div>
 
         {current < questions.length - 1 ? (
-          <button
-            className="btn btn-primary"
-            onClick={() => setCurrent(c => c + 1)}
-          >
+          <button className="btn btn-primary" onClick={() => setCurrent(c => c + 1)}>
             Next →
           </button>
         ) : (
           <button
             className="btn btn-secondary"
             onClick={handleSubmit}
+            disabled={submitted}
           >
-            🏁 Submit Quiz
+            🏁 Submit
           </button>
         )}
       </div>
+
+      {/* Submit button always visible at bottom */}
+      {current < questions.length - 1 && (
+        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+          <button
+            className="btn btn-secondary"
+            onClick={handleSubmit}
+            disabled={submitted}
+          >
+            🏁 Submit Quiz
+          </button>
+        </div>
+      )}
     </div>
   )
 }
-

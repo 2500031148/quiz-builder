@@ -38,10 +38,11 @@ export default function UserDashboard() {
 
   const filtered = quizzes
     .filter(q => {
+      const isPublished = q.published !== false  // show only published quizzes to users
       const matchSearch = q.title.toLowerCase().includes(search.toLowerCase()) ||
         q.description?.toLowerCase().includes(search.toLowerCase())
       const matchCat = catFilter === 'All' || q.category === catFilter
-      return matchSearch && matchCat
+      return isPublished && matchSearch && matchCat
     })
     .sort((a, b) => {
       if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt)

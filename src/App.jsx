@@ -24,6 +24,7 @@ import Leaderboard from './pages/user/Leaderboard'
 // Shared
 import Navbar from './components/Navbar'
 import Home from './pages/Home'
+import { ToastContainer } from './components/Toast'
 
 export default function App() {
   return (
@@ -73,6 +74,7 @@ export default function App() {
           </Routes>
         </QuizProvider>
       </AuthProvider>
+      <ToastContainer />
     </BrowserRouter>
   )
 }
