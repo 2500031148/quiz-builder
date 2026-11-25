@@ -3,3 +3,7 @@ dist
 .env
 .env.local
 
+.vercel
+.DS_Store
+src/.DS_Store
+src/pages/.DS_Store

@@ -19,6 +19,7 @@ import UserDashboard from './pages/user/UserDashboard'
 import TakeQuiz from './pages/user/TakeQuiz'
 import QuizResult from './pages/user/QuizResult'
 import UserHistory from './pages/user/UserHistory'
+import Leaderboard from './pages/user/Leaderboard'
 
 // Shared
 import Navbar from './components/Navbar'
@@ -64,6 +65,7 @@ export default function App() {
               <Route path="take-quiz/:id" element={<TakeQuiz />} />
               <Route path="result/:id" element={<QuizResult />} />
               <Route path="history" element={<UserHistory />} />
+              <Route path="leaderboard" element={<Leaderboard />} />
             </Route>
 
             {/* Catch all */}

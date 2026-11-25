@@ -21,6 +21,30 @@ export default function AdminReports() {
 
   const formatDate = (d) => new Date(d).toLocaleString()
 
+  // CSV Export
+  const exportCSV = () => {
+    const headers = ['Participant', 'Email', 'Quiz', 'Score (%)', 'Correct', 'Total', 'Time Taken (s)', 'Status', 'Completed At']
+    const rows = sortedAttempts.map(a => [
+      a.userName,
+      a.userEmail,
+      a.quizTitle,
+      a.percentage,
+      a.correct,
+      a.total,
+      a.timeTaken ?? '',
+      a.percentage >= 60 ? 'Pass' : 'Fail',
+      new Date(a.completedAt).toLocaleString(),
+    ])
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `quiz-reports-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="page">
       <div className="page-header">
@@ -28,6 +52,11 @@ export default function AdminReports() {
           <h1>Reports & Analytics 📊</h1>
           <p>Overview of quiz performance and participant activity.</p>
         </div>
+        {attempts.length > 0 && (
+          <button className="btn btn-secondary" onClick={exportCSV}>
+            ⬇️ Export CSV
+          </button>
+        )}
       </div>
 
       {/* Summary Stats */}
@@ -87,11 +116,15 @@ export default function AdminReports() {
                   <td>{q.passed}</td>
                   <td>
                     {q.attempts.length > 0 ? (
-                      <div>
-                        <div className="progress-bar-container" style={{ width: 100, display: 'inline-block', marginRight: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ background: '#e2e8f0', borderRadius: 999, height: 8, width: 100, overflow: 'hidden' }}>
                           <div
-                            className="progress-bar-fill"
-                            style={{ width: `${Math.round((q.passed / q.attempts.length) * 100)}%` }}
+                            style={{
+                              height: '100%',
+                              width: `${Math.round((q.passed / q.attempts.length) * 100)}%`,
+                              background: 'var(--success)',
+                              borderRadius: 999,
+                            }}
                           />
                         </div>
                         {Math.round((q.passed / q.attempts.length) * 100)}%
@@ -107,7 +140,12 @@ export default function AdminReports() {
 
       {/* All Attempts */}
       <div className="card">
-        <h2 className="section-title">All Attempts</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 className="section-title" style={{ marginBottom: 0 }}>All Attempts</h2>
+          {attempts.length > 0 && (
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{attempts.length} total</span>
+          )}
+        </div>
         {attempts.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">📝</div>
@@ -123,6 +161,7 @@ export default function AdminReports() {
                 <th>Score</th>
                 <th>Correct</th>
                 <th>Time Taken</th>
+                <th>Status</th>
                 <th>Completed At</th>
               </tr>
             </thead>
@@ -140,7 +179,12 @@ export default function AdminReports() {
                     </span>
                   </td>
                   <td>{a.correct}/{a.total}</td>
-                  <td>{a.timeTaken ? `${a.timeTaken}s` : '—'}</td>
+                  <td>{a.timeTaken ? `${Math.floor(a.timeTaken / 60)}m ${a.timeTaken % 60}s` : '—'}</td>
+                  <td>
+                    <span className={`badge ${a.percentage >= 60 ? 'badge-success' : 'badge-danger'}`}>
+                      {a.percentage >= 60 ? '✅ Pass' : '❌ Fail'}
+                    </span>
+                  </td>
                   <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{formatDate(a.completedAt)}</td>
                 </tr>
               ))}
@@ -151,4 +195,3 @@ export default function AdminReports() {
     </div>
   )
 }
-

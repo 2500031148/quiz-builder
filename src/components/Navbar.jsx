@@ -24,6 +24,7 @@ export default function Navbar() {
       ]
     : [
         { to: '/user', label: '🏠 Dashboard' },
+        { to: '/user/leaderboard', label: '🏆 Leaderboard' },
         { to: '/user/history', label: '📜 My History' },
       ]
 
